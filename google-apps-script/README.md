@@ -9,3 +9,5 @@
 7. Paste that URL into `config.js` as `apiUrl`.
 
 The public endpoint never returns the full guest list. A private edit token retrieves only its own RSVP.
+
+The site uses hidden form POSTs for both saves and private edit-link lookups. After changing `Code.gs`, create a new web-app deployment version; saving the script alone does not update an existing deployment.
