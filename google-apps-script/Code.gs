@@ -25,7 +25,7 @@ function doPost(e) {
   const safe = JSON.stringify({ source: "darshan-rsvp", ...result }).replace(/</g, "\\u003c");
   return HtmlService.createHtmlOutput(
     `<!doctype html><meta charset="utf-8"><script>parent.postMessage(${safe}, "*");</script>`
-  );
+  ).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function saveRsvp_(payload) {
@@ -54,12 +54,14 @@ function saveRsvp_(payload) {
     if (!responses || !attendees) throw new Error("The response workbook is not configured correctly.");
 
     const now = new Date();
-    const existingToken = String(payload.token || "").trim();
-    let row = existingToken ? findTokenRow_(responses, existingToken) : 0;
-    if (existingToken && !row) throw new Error("That private edit link is not valid. Please contact the host.");
+    const suppliedToken = String(payload.token || "").trim();
+    let row = suppliedToken ? findTokenRow_(responses, suppliedToken) : 0;
+    if (suppliedToken && !row && !/^[a-f0-9]{64}$/i.test(suppliedToken)) {
+      throw new Error("That private edit link is not valid. Please contact the host.");
+    }
 
     const rsvpId = row ? String(responses.getRange(row, 1).getValue()) : Utilities.getUuid();
-    const token = row ? existingToken : Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+    const token = row ? suppliedToken : suppliedToken || Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
     const submittedAt = row ? responses.getRange(row, 8).getValue() : now;
     const revision = row ? Number(responses.getRange(row, 10).getValue() || 0) + 1 : 1;
     const guestCount = status === "attending" ? 1 + guests.length : 0;
@@ -96,6 +98,7 @@ function getRsvp_(token) {
   return {
     ok: true, token, firstName: response[2], lastName: response[3],
     status: response[4] === "Will Attend" ? "attending" : "declined", guests: resultGuests,
+    guestCount: Number(response[6] || 0),
   };
 }
 
