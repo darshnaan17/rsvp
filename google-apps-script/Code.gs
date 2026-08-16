@@ -16,15 +16,18 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  const requestId = String(e.parameter.requestId || "").slice(0, 100);
   let result;
   try {
-    result = saveRsvp_(JSON.parse(e.parameter.payload || "{}"));
+    result = String(e.parameter.action || "save") === "get"
+      ? getRsvp_(String(e.parameter.token || ""))
+      : saveRsvp_(JSON.parse(e.parameter.payload || "{}"));
   } catch (error) {
-    result = { ok: false, message: error.message || "Your RSVP could not be saved." };
+    result = { ok: false, message: error.message || "Your RSVP request could not be completed." };
   }
-  const safe = JSON.stringify({ source: "darshan-rsvp", ...result }).replace(/</g, "\\u003c");
+  const safe = JSON.stringify({ source: "darshan-rsvp", requestId, ...result }).replace(/</g, "\\u003c");
   return HtmlService.createHtmlOutput(
-    `<!doctype html><meta charset="utf-8"><script>parent.postMessage(${safe}, "*");</script>`
+    `<!doctype html><meta charset="utf-8"><script>top.postMessage(${safe}, "*");</script>`
   ).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -66,7 +69,10 @@ function saveRsvp_(payload) {
     if (!row) row = findNameRow_(responses, firstName, lastName);
 
     const rsvpId = row ? String(responses.getRange(row, 1).getValue()) : Utilities.getUuid();
-    const token = tokenMatched ? suppliedToken : suppliedToken || Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+    const existingToken = row ? String(responses.getRange(row, 2).getValue()) : "";
+    const token = tokenMatched
+      ? suppliedToken
+      : existingToken || suppliedToken || Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
     const submittedAt = row ? responses.getRange(row, 8).getValue() : now;
     const revision = row ? Number(responses.getRange(row, 10).getValue() || 0) + 1 : 1;
     const guestCount = status === "attending" ? 1 + guests.length : 0;
