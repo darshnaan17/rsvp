@@ -19,6 +19,7 @@
   const frame = $("#submission-frame");
   let editLink = "";
   let timer;
+  let finished = false;
 
   const status = () => form.querySelector('input[name="status"]:checked')?.value || "";
   const clean = (v) => v.trim().replace(/\s+/g, " ");
@@ -106,9 +107,29 @@
       submitting(false);
       showError(`We couldn’t confirm your RSVP. Try again or contact ${cfg.hostName} at ${cfg.hostPhone}.`);
     }, 15000);
+    confirmSaved(payload.token);
+  }
+
+  function confirmSaved(token, attempt = 0) {
+    const callback = `rsvpSaveCallback${Date.now()}${attempt}`;
+    window[callback] = (result) => {
+      delete window[callback];
+      if (result.ok) return finish({ ...result, token });
+      if (attempt < 7 && !finished) setTimeout(() => confirmSaved(token, attempt + 1), 900);
+    };
+    const script = document.createElement("script");
+    script.src = `${cfg.apiUrl}?action=get&token=${encodeURIComponent(token)}&callback=${callback}&_=${Date.now()}`;
+    script.onerror = () => {
+      delete window[callback];
+      if (attempt < 7 && !finished) setTimeout(() => confirmSaved(token, attempt + 1), 900);
+    };
+    script.onload = () => script.remove();
+    document.body.append(script);
   }
 
   function finish(result) {
+    if (finished) return;
+    finished = true;
     clearTimeout(timer);
     submitting(false);
     if (!result.ok) return showError(result.message || "We couldn’t save your RSVP. Please try again.");
@@ -167,10 +188,12 @@
     if (closed()) { form.hidden = true; closedView.hidden = false; return; }
     if (!cfg.apiUrl) return showError("The RSVP form is being connected. Please check back shortly.");
     if (!valid()) return;
+    finished = false;
     submitting(true);
+    const privateToken = tokenInput.value || `${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
     post({
       firstName: clean(first.value), lastName: clean(last.value), status: status(),
-      guests: status() === "attending" ? guests() : [], token: tokenInput.value,
+      guests: status() === "attending" ? guests() : [], token: privateToken,
       website: $("#website").value,
     });
   });
