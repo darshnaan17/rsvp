@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#8f1d3f">
+  <meta name="description" content="RSVP for Darshan's Prewedding Ceremony by September 30, 2026.">
+  <title>Darshan's Prewedding Ceremony | RSVP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Yeseva+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="sun sun-one" aria-hidden="true"></div>
+    <div class="sun sun-two" aria-hidden="true"></div>
+    <main class="rsvp-card" aria-labelledby="page-title">
+      <header class="hero">
+        <p class="eyebrow">You’re invited to celebrate</p>
+        <div class="ornament" aria-hidden="true"><span>✦</span></div>
+        <h1 id="page-title">Darshan’s<br>Prewedding Ceremony</h1>
+        <p class="intro">We’d love to celebrate with you.</p>
+        <p class="deadline">Kindly respond by September 30, 2026</p>
+      </header>
+
+      <section id="closed-view" class="notice-view" hidden>
+        <div class="notice-icon" aria-hidden="true">✦</div>
+        <h2>Online RSVPs are closed</h2>
+        <p>Please contact Jayesh Vala to make or change your RSVP.</p>
+        <a class="contact-button" href="tel:+18137276708">Call or text 813-727-6708</a>
+      </section>
+
+      <section id="loading-view" class="notice-view" hidden aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <h2>Finding your RSVP…</h2>
+        <p>One moment while we load your response.</p>
+      </section>
+
+      <form id="rsvp-form" novalidate>
+        <input type="hidden" id="edit-token">
+        <input class="honeypot" type="text" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        <fieldset class="form-section">
+          <legend>First, tell us your name</legend>
+          <div class="name-grid">
+            <label><span>First name</span><input id="first-name" type="text" autocomplete="given-name" maxlength="60" required></label>
+            <label><span>Last name</span><input id="last-name" type="text" autocomplete="family-name" maxlength="60" required></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>Will you be joining us?</legend>
+          <div class="attendance-options">
+            <label class="choice-card">
+              <input type="radio" name="status" value="attending" required>
+              <span class="choice-copy"><span class="choice-mark">✓</span><span><strong>Will Attend</strong><small>Can’t wait to celebrate!</small></span></span>
+            </label>
+            <label class="choice-card">
+              <input type="radio" name="status" value="declined" required>
+              <span class="choice-copy"><span class="choice-mark">×</span><span><strong>Will Not Attend</strong><small>Celebrating from afar</small></span></span>
+            </label>
+          </div>
+        </fieldset>
+
+        <section id="guest-section" class="form-section" hidden aria-labelledby="guest-heading">
+          <div class="section-heading-row">
+            <div><h2 id="guest-heading">Who else is coming?</h2><p>Add each guest’s first and last name.</p></div>
+            <div class="party-count" aria-live="polite"><span id="party-count">1</span><small id="party-label">guest total</small></div>
+          </div>
+          <div id="guest-list" class="guest-list"></div>
+          <button id="add-guest" class="secondary-button" type="button"><span aria-hidden="true">＋</span> Add another guest</button>
+        </section>
+
+        <div id="form-error" class="form-error" role="alert" hidden></div>
+        <button id="submit-button" class="submit-button" type="submit"><span id="submit-label">Submit RSVP</span><span aria-hidden="true">→</span></button>
+        <p class="privacy-note">Your response is private and visible only to the hosts.</p>
+      </form>
+
+      <section id="success-view" class="notice-view" hidden aria-live="polite">
+        <div class="notice-icon" aria-hidden="true">✓</div>
+        <p class="eyebrow">RSVP received</p>
+        <h2 id="success-title">Thank you!</h2>
+        <p id="success-message"></p>
+        <div class="edit-link-box">
+          <strong>Need to make a change?</strong>
+          <p>Save this private link. You can update your RSVP through September 30.</p>
+          <button id="copy-link" class="secondary-button" type="button">Copy my edit link</button>
+          <p id="copy-status" class="copy-status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <footer><span aria-hidden="true">✦</span><p>With love, the Vala family</p><span aria-hidden="true">✦</span></footer>
+    </main>
+  </div>
+  <iframe id="submission-frame" name="submission-frame" title="RSVP submission" hidden></iframe>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
