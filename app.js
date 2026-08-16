@@ -20,6 +20,7 @@
   let editLink = "";
   let timer;
   let finished = false;
+  let pendingRequest = null;
 
   const status = () => form.querySelector('input[name="status"]:checked')?.value || "";
   const clean = (v) => v.trim().replace(/\s+/g, " ");
@@ -89,57 +90,33 @@
     submitLabel.textContent = value ? "Saving your RSVP…" : tokenInput.value ? "Update RSVP" : "Submit RSVP";
   }
 
-  function post(payload) {
+  function postToBackend(fields, kind) {
+    const requestId = crypto.randomUUID();
+    pendingRequest = { requestId, kind };
     const postForm = document.createElement("form");
     postForm.method = "POST";
     postForm.action = cfg.apiUrl;
     postForm.target = frame.name;
     postForm.hidden = true;
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "payload";
-    input.value = JSON.stringify(payload);
-    postForm.append(input);
+    Object.entries({ ...fields, requestId }).forEach(([name, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      postForm.append(input);
+    });
     document.body.append(postForm);
     postForm.submit();
     postForm.remove();
-    timer = setTimeout(() => {
-      submitting(false);
-      showError(`We couldn’t confirm your RSVP. Try again or contact ${cfg.hostName} at ${cfg.hostPhone}.`);
-    }, 50000);
-    confirmSaved(payload.token, payload);
   }
 
-  function confirmSaved(token, expected, attempt = 0) {
-    const callback = `rsvpSaveCallback${Date.now()}${attempt}`;
-    let settled = false;
-    const retry = () => {
-      if (settled || finished) return;
-      settled = true;
-      delete window[callback];
-      if (attempt < 15) setTimeout(() => confirmSaved(token, expected, attempt + 1), 500);
-    };
-    const watchdog = setTimeout(retry, 2500);
-    window[callback] = (result) => {
-      if (settled || finished) return;
-      settled = true;
-      clearTimeout(watchdog);
-      delete window[callback];
-      const expectedCount = expected.status === "attending" ? 1 + expected.guests.length : 0;
-      const matches = result.ok && result.status === expected.status
-        && result.firstName === expected.firstName && result.lastName === expected.lastName
-        && Number(result.guestCount) === expectedCount;
-      if (matches) return finish({ ...result, token });
-      if (attempt < 15 && !finished) setTimeout(() => confirmSaved(token, expected, attempt + 1), 500);
-    };
-    const script = document.createElement("script");
-    script.src = `${cfg.apiUrl}?action=get&token=${encodeURIComponent(token)}&callback=${callback}&_=${Date.now()}`;
-    script.onerror = () => {
-      clearTimeout(watchdog);
-      retry();
-    };
-    script.onload = () => script.remove();
-    document.body.append(script);
+  function post(payload) {
+    postToBackend({ action: "save", payload: JSON.stringify(payload) }, "save");
+    timer = setTimeout(() => {
+      pendingRequest = null;
+      submitting(false);
+      showError(`We couldn’t confirm your RSVP. Try again or contact ${cfg.hostName} at ${cfg.hostPhone}.`);
+    }, 30000);
   }
 
   function finish(result) {
@@ -183,11 +160,11 @@
     if (!cfg.apiUrl) return;
     form.hidden = true;
     loadingView.hidden = false;
-    window.rsvpEditCallback = populate;
-    const script = document.createElement("script");
-    script.src = `${cfg.apiUrl}?action=get&token=${encodeURIComponent(token)}&callback=rsvpEditCallback&_=${Date.now()}`;
-    script.onerror = () => populate({ ok: false, message: "We couldn’t load that RSVP." });
-    document.body.append(script);
+    postToBackend({ action: "get", token }, "load");
+    timer = setTimeout(() => {
+      pendingRequest = null;
+      populate({ ok: false, message: "We couldn’t load that RSVP." });
+    }, 30000);
   }
 
   form.addEventListener("input", clearError);
@@ -215,7 +192,19 @@
     });
   });
   window.addEventListener("message", (event) => {
-    if (event.source === frame.contentWindow && event.data?.source === "darshan-rsvp") finish(event.data);
+    let hostname = "";
+    try { hostname = new URL(event.origin).hostname; } catch { return; }
+    const trustedOrigin = hostname === "script.google.com"
+      || hostname === "script.googleusercontent.com"
+      || hostname.endsWith("-script.googleusercontent.com");
+    if (!trustedOrigin || event.data?.source !== "darshan-rsvp" || !pendingRequest) return;
+    if (event.data.requestId !== pendingRequest.requestId) return;
+
+    const request = pendingRequest;
+    pendingRequest = null;
+    clearTimeout(timer);
+    if (request.kind === "load") return populate(event.data);
+    finish(event.data);
   });
   $("#copy-link").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(editLink); $("#copy-status").textContent = "Private edit link copied!"; }
