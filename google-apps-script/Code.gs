@@ -56,12 +56,17 @@ function saveRsvp_(payload) {
     const now = new Date();
     const suppliedToken = String(payload.token || "").trim();
     let row = suppliedToken ? findTokenRow_(responses, suppliedToken) : 0;
+    const tokenMatched = Boolean(row);
+    if (String(payload.mode || "") === "update" && !tokenMatched) {
+      throw new Error("That private edit link is not valid. Please contact the host.");
+    }
     if (suppliedToken && !row && !/^[a-f0-9]{64}$/i.test(suppliedToken)) {
       throw new Error("That private edit link is not valid. Please contact the host.");
     }
+    if (!row) row = findNameRow_(responses, firstName, lastName);
 
     const rsvpId = row ? String(responses.getRange(row, 1).getValue()) : Utilities.getUuid();
-    const token = row ? suppliedToken : suppliedToken || Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+    const token = tokenMatched ? suppliedToken : suppliedToken || Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
     const submittedAt = row ? responses.getRange(row, 8).getValue() : now;
     const revision = row ? Number(responses.getRange(row, 10).getValue() || 0) + 1 : 1;
     const guestCount = status === "attending" ? 1 + guests.length : 0;
@@ -119,6 +124,18 @@ function findTokenRow_(sheet, token) {
   if (!sheet || sheet.getLastRow() < 2) return 0;
   const match = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).createTextFinder(token).matchEntireCell(true).findNext();
   return match ? match.getRow() : 0;
+}
+
+function findNameRow_(sheet, firstName, lastName) {
+  if (!sheet || sheet.getLastRow() < 2) return 0;
+  const names = sheet.getRange(2, 3, sheet.getLastRow() - 1, 2).getDisplayValues();
+  const targetFirst = firstName.toLowerCase();
+  const targetLast = lastName.toLowerCase();
+  for (let index = names.length - 1; index >= 0; index -= 1) {
+    if (cleanName_(names[index][0]).toLowerCase() === targetFirst
+      && cleanName_(names[index][1]).toLowerCase() === targetLast) return index + 2;
+  }
+  return 0;
 }
 
 function cleanName_(value) { return String(value || "").trim().replace(/\s+/g, " ").slice(0, 60); }
