@@ -107,21 +107,25 @@
       submitting(false);
       showError(`We couldn’t confirm your RSVP. Try again or contact ${cfg.hostName} at ${cfg.hostPhone}.`);
     }, 15000);
-    confirmSaved(payload.token);
+    confirmSaved(payload.token, payload);
   }
 
-  function confirmSaved(token, attempt = 0) {
+  function confirmSaved(token, expected, attempt = 0) {
     const callback = `rsvpSaveCallback${Date.now()}${attempt}`;
     window[callback] = (result) => {
       delete window[callback];
-      if (result.ok) return finish({ ...result, token });
-      if (attempt < 7 && !finished) setTimeout(() => confirmSaved(token, attempt + 1), 900);
+      const expectedCount = expected.status === "attending" ? 1 + expected.guests.length : 0;
+      const matches = result.ok && result.status === expected.status
+        && result.firstName === expected.firstName && result.lastName === expected.lastName
+        && Number(result.guestCount) === expectedCount;
+      if (matches) return finish({ ...result, token });
+      if (attempt < 7 && !finished) setTimeout(() => confirmSaved(token, expected, attempt + 1), 900);
     };
     const script = document.createElement("script");
     script.src = `${cfg.apiUrl}?action=get&token=${encodeURIComponent(token)}&callback=${callback}&_=${Date.now()}`;
     script.onerror = () => {
       delete window[callback];
-      if (attempt < 7 && !finished) setTimeout(() => confirmSaved(token, attempt + 1), 900);
+      if (attempt < 7 && !finished) setTimeout(() => confirmSaved(token, expected, attempt + 1), 900);
     };
     script.onload = () => script.remove();
     document.body.append(script);
