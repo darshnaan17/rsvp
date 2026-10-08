@@ -1,7 +1,7 @@
 const SETTINGS = Object.freeze({
   responsesSheet: "Responses",
   attendeesSheet: "Attendees",
-  deadline: "2026-10-01T00:00:00-04:00",
+  deadline: "2026-11-12T00:00:00-05:00",
   maxAdditionalGuests: 20,
 });
 
@@ -32,7 +32,7 @@ function doPost(e) {
 }
 
 function saveRsvp_(payload) {
-  if (isClosed_()) return { ok: false, message: "Online RSVPs closed on September 30. Please contact Jayesh Vala at 813-727-6708." };
+  if (isClosed_()) return { ok: false, message: "Online RSVPs closed on November 11. Please contact Jayesh Vala at 813-727-6708." };
   if (String(payload.website || "").trim()) return { ok: false, message: "Your RSVP could not be saved." };
 
   const firstName = cleanName_(payload.firstName);
